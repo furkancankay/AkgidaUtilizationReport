@@ -4,10 +4,10 @@ from datetime import datetime, timedelta
 from openpyxl import Workbook
 from openpyxl.styles import Font
 
-# ====== ilk olarak kac gunluk veri gerektigini ve en az kaç dk musait zaman istedigimizi cekiyoruz. ======
+# ====== ilk olarak kac gunluk veri gerektigini ve en az kac dk musait zaman istedigimizi cekiyoruz. ======
 
 database_dosya_yolu = "C:\\Users\\furkan.cankaya\\Desktop\\Dosyalar\\ExcelKod\\data.csv"
-degiskenlercsv_ortak_dosya_yolu = "C:\\Users\\furkan.cankaya\\Desktop\\Dosyalar\\ExcelKod\\Degiskenler.csv"
+degiskenlercsv_ortak_dosya_yolu = "C:\\Users\\furkan.cankaya\\Desktop\\Dosyalar\\ExcelKod\\variables.csv"
 utilizasyonraporu_cikti_dosyasi_yolu = "C:\\Users\\furkan.cankaya\\Desktop\\Dosyalar\\ExcelKod\\Utilizasyon.xlsx"
 
 with open(degiskenlercsv_ortak_dosya_yolu, "r", encoding="utf-8") as dosya:
@@ -20,8 +20,6 @@ day_interval = int(degisken_satirlari[1].split(";")[1])
 min_free_time_minutes = int(degisken_satirlari[2].split(";")[1])
 
 
-
-
 i = 0
 while i < len(veri_satirlari):
     if veri_satirlari[-(i+1)].split(",")[11].strip() != "":
@@ -30,8 +28,6 @@ while i < len(veri_satirlari):
 
         break
     i += 1
-
-
 
 titles = veri_satirlari[0].split(",")
 duzenlenmis_veri_satirlari = []
