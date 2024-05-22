@@ -14,7 +14,7 @@ The Excel in the zip file downloaded via Orchestrator is extracted and its name 
 
 ### 2. Input files
 A csv file is created in the common area and the file path of this file is edited in the code.
-* `degiskenlercsv_ortak_dosya_yolu = "C:\\Users\\furkan.cankaya\\Desktop\\ExcelKod\\Degiskenler.csv"`
+* `degiskenlercsv_ortak_dosya_yolu = "C:\\Users\\furkan.cankaya\\Desktop\\ExcelKod\\variables.csv"`
 * 
 ### 3. Set the paths
 Insert the file path where you want to put the report into the code.
