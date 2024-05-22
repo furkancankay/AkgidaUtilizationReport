@@ -187,6 +187,7 @@ wb = Workbook()
 for robotprocesses in utilization:
     success_counter = 0
     faulted_counter = 0
+    running_counter = 0
     pending_counter = 0
     calc_successful = 0
     robot_free_intervals = []
@@ -207,6 +208,10 @@ for robotprocesses in utilization:
             faulted_counter += 1
             temp = calculate_time_difference_in_minutes(process["starteddate"], process["endeddate"])
 
+        elif process["processresult"] == "Running":
+            running_counter += 1
+            temp = ""
+        
         elif process["processresult"] == "Running":
             pending_counter += 1
             temp = ""
@@ -236,7 +241,8 @@ for robotprocesses in utilization:
         "Total Consumed Time": str(calc_successful),
         "Successful Counter": success_counter, 
         "Faulted Counter": faulted_counter, 
-        "Running Counter": pending_counter,
+        "Running Counter": running_counter,
+        "Pending Counter": pending_counter,
         "Efficiency": "%" + str(tempcalc)
     }
     utilization[robotprocesses]["available"] = robot_free_intervals
@@ -251,18 +257,18 @@ for robotprocesses in utilization:
     ws[ws.max_row][0].font = bold_font
     ws.append(["Faulted Counter",faulted_counter])
     ws[ws.max_row][0].font = bold_font
-    ws.append(["Running Counter",pending_counter])
+    ws.append(["Running Counter",running_counter])
     ws[ws.max_row][0].font = bold_font
     ws.append(["Efficiency", "%" + str(tempcalc)])
     ws[ws.max_row][0].font = bold_font
     ws.append([])
     ws.append([])
 
-
-    ws.append(["Available Start Times", "Available End Times","Total Free Time"])
-    ws[ws.max_row][0].font = bold_font
-    ws[ws.max_row][1].font = bold_font
-    ws[ws.max_row][2].font = bold_font
+    if utilization[robotprocesses]["available"] != []:
+        ws.append(["Available Start Times", "Available End Times","Total Free Time"])
+        ws[ws.max_row][0].font = bold_font
+        ws[ws.max_row][1].font = bold_font
+        ws[ws.max_row][2].font = bold_font
 
     for gapdata in utilization[robotprocesses]["available"]:
         gap = format_time(calculate_time_difference_in_minutes(gapdata["start"],gapdata["end"]))
