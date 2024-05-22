@@ -20,5 +20,6 @@ A csv file is created in the common area and the file path of this file is edite
 Insert the file path where you want to put the report into the code.
 * `degiskenlercsv_ortak_dosya_yolu = "C:\\Users\\furkan.cankaya\\Desktop\\ExcelKod\\Utilizasyon.xlsx"`
 
-
-You are now ready. When you run the code, it reads the data.csv data according to the input values ​​you entered, makes the utilization calculation and puts the utilization report in the folder you want.
+##
+Now, you are ready. When you run the code, it reads the data.csv data according to the input values ​​you entered, makes the utilization calculation and puts the utilization report in the folder you want.
+##
