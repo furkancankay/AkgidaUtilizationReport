@@ -10,19 +10,27 @@ database_dosya_yolu = "C:\\Users\\furkan.cankaya\\Desktop\\Dosyalar\\ExcelKod\\d
 degiskenlercsv_ortak_dosya_yolu = "C:\\Users\\furkan.cankaya\\Desktop\\Dosyalar\\ExcelKod\\Degiskenler.csv"
 utilizasyonraporu_cikti_dosyasi_yolu = "C:\\Users\\furkan.cankaya\\Desktop\\Dosyalar\\ExcelKod\\Utilizasyon.xlsx"
 
-
 with open(degiskenlercsv_ortak_dosya_yolu, "r", encoding="utf-8") as dosya:
     degisken_satirlari = dosya.readlines()
-
-day_interval = int(degisken_satirlari[1].split(";")[1])
-min_free_time_minutes = int(degisken_satirlari[2].split(";")[1])
 
 with open(database_dosya_yolu, "r", encoding="utf-8") as dosya:
     veri_satirlari = dosya.readlines()
 
+day_interval = int(degisken_satirlari[1].split(";")[1])
+min_free_time_minutes = int(degisken_satirlari[2].split(";")[1])
 
-lastdate = datetime.strptime(veri_satirlari[-1].split(",")[11], "%m/%d/%Y %I:%M:%S %p")
-startdate = lastdate - timedelta(days=day_interval)
+
+
+
+i = 0
+while i < len(veri_satirlari):
+    if veri_satirlari[-(i+1)].split(",")[11].strip() != "":
+        lastdate = datetime.strptime(veri_satirlari[-(i+1)].split(",")[11].strip(), "%m/%d/%Y %I:%M:%S %p")
+        startdate = lastdate - timedelta(days=day_interval)
+
+        break
+    i += 1
+
 
 
 titles = veri_satirlari[0].split(",")
@@ -268,4 +276,3 @@ for robotprocesses in utilization:
 
 wb.remove(wb["Sheet"])
 wb.save(utilizasyonraporu_cikti_dosyasi_yolu)
-
