@@ -3,12 +3,14 @@ from datetime import datetime, timedelta
 ### These libraries needs to be uploaded ###
 from openpyxl import Workbook
 from openpyxl.styles import Font
+import sqlite3
+
 
 # ====== ilk olarak kac gunluk veri gerektigini ve en az kac dk musait zaman istedigimizi cekiyoruz. ======
 
-database_dosya_yolu = "C:\\Users\\furkan.cankaya\\Desktop\\Dosyalar\\ExcelKod\\data.csv"
-degiskenlercsv_ortak_dosya_yolu = "C:\\Users\\furkan.cankaya\\Desktop\\Dosyalar\\ExcelKod\\variables.csv"
-utilizasyonraporu_cikti_dosyasi_yolu = "C:\\Users\\furkan.cankaya\\Desktop\\Dosyalar\\ExcelKod\\Utilizasyon.xlsx"
+database_dosya_yolu = "data.csv"
+degiskenlercsv_ortak_dosya_yolu = "variables.csv"
+utilizasyonraporu_cikti_dosyasi_yolu = "Utilizasyon.xlsx"
 
 with open(degiskenlercsv_ortak_dosya_yolu, "r", encoding="utf-8") as dosya:
     degisken_satirlari = dosya.readlines()
@@ -81,9 +83,9 @@ for satir in veri_satirlari:
     counter += 1
 
 
-# with open("sorgulanmisveriler.csv", "w", encoding="utf-8-sig") as yeni_dosya:
-#     for satir in duzenlenmis_veri_satirlari:
-#         yeni_dosya.write(satir + "\n")
+#with open("sorgulanmisveriler.csv", "w", encoding="utf-8-sig") as yeni_dosya:
+#    for satir in duzenlenmis_veri_satirlari:
+#        yeni_dosya.write(satir + "\n")
 print(str(startdate) + " tarihinden " + str(lastdate) + " tarihine kadar olan veriler excel e aktarildi.")
 
 
@@ -174,6 +176,19 @@ def calculate_time_difference_in_minutes(start_date_str, end_date_str):
 
     return time_difference_in_minutes
 
+def save_data_to_db(robot, tarih, yuzde):
+    conn = sqlite3.connect('monthlyrobots.db')
+    cursor = conn.cursor()
+
+    # Tabloyu oluşturma (eğer yoksa)
+    cursor.execute('''CREATE TABLE IF NOT EXISTS monthlyrobots
+                    (Robot TEXT, Tarih TEXT, Yuzde TEXT)''')
+
+    cursor.execute("INSERT INTO monthlyrobots (Robot, Tarih, Yuzde) VALUES (?, ?, ?)",(robot, tarih, yuzde))
+
+    conn.commit()
+
+    conn.close()
 
 bold_font = Font(bold=True)
 availabletimes = ""
@@ -185,6 +200,7 @@ for robotprocesses in utilization:
     faulted_counter = 0
     running_counter = 0
     pending_counter = 0
+    stopped_counter = 0
     calc_successful = 0
     robot_free_intervals = []
     
@@ -208,10 +224,16 @@ for robotprocesses in utilization:
             running_counter += 1
             temp = ""
         
-        elif process["processresult"] == "Running":
+        elif process["processresult"] == "Pending":
             pending_counter += 1
             temp = ""
-        
+
+        elif process["processresult"] == "Stopped":
+            stopped_counter += 1
+            temp = ""
+
+
+
         if idx > 0:
             previous_process = sorted_processes[idx - 1]
             end_prev = datetime.strptime(previous_process["endeddate"], "%m/%d/%Y %I:%M:%S %p")
@@ -242,10 +264,9 @@ for robotprocesses in utilization:
         "Efficiency": "%" + str(tempcalc)
     }
     utilization[robotprocesses]["available"] = robot_free_intervals
-
     ws.append([])
     ws.append([])
-
+    save_data_to_db(robotprocesses, (datetime.strptime(process["starteddate"], "%m/%d/%Y %I:%M:%S %p")).strftime("%m/%Y"), "%" + str(tempcalc))
 
     ws.append(["Total Consumed Time", str(round(calc_successful, 3))+"dakika"])
     ws[ws.max_row][0].font = bold_font
@@ -257,6 +278,7 @@ for robotprocesses in utilization:
     ws[ws.max_row][0].font = bold_font
     ws.append(["Efficiency", "%" + str(tempcalc)])
     ws[ws.max_row][0].font = bold_font
+    
     ws.append([])
     ws.append([])
 
