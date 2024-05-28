@@ -14,6 +14,18 @@ degiskenlercsv_ortak_dosya_yolu = "variables.csv"
 utilizasyonraporu_cikti_dosyasi_yolu = "Utilizasyon.xlsx"
 sql_database = 'monthlyrobots.db'
 
+conn = sqlite3.connect(sql_database)
+cursor = conn.cursor()
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS monthlyrobots (
+    robot_name TEXT,
+    date DATETIME,
+    percentage TEXT
+)
+''')
+conn.commit()
+conn.close()
+
 with open(degiskenlercsv_ortak_dosya_yolu, "r", encoding="utf-8") as dosya:
     degisken_satirlari = dosya.readlines()
 
@@ -327,11 +339,8 @@ for robotprocesses in utilization:
 
 
 ws = wb.create_sheet("Efficiency by Dates")
-
 connection = sqlite3.connect(sql_database)
-
 df = pd.read_sql_query("SELECT * FROM monthlyrobots", connection)
-
 connection.close()
 
 df.columns = df.columns.str.lower().str.strip()
@@ -343,9 +352,7 @@ pivot_df = df.pivot(index='date', columns='robot_name', values='percentage')
 for r in dataframe_to_rows(pivot_df, index=True, header=True):
     ws.append(r)
 
-# Fazladan başlıkları kaldırma
 ws.delete_rows(ws.max_row-4, 1)
-
 # Graph creator
 chart = LineChart()
 chart.title = "Robot Efficiencies"
@@ -362,10 +369,7 @@ chart.width = 20
 chart.height = 10
 ws.add_chart(chart, "A"+str(ws.max_row+2))
 
-
-
 wb.remove(wb["Sheet"])
-
 wb.save(utilizasyonraporu_cikti_dosyasi_yolu)
 
 
