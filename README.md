@@ -3,6 +3,7 @@ Thanks to this project, the efficiency, conditions and suitability of robots can
 
 ## 🧬 Requirements
 * `openpyxl   3.1.2`
+* `pandas     2.2.2`
 
 ## Our Goal:
 Through this code, the data in the Excel file downloaded from the orchestrator platform within Ak Gıda RPA department is processed and a report is sent to RPA officials by calculating the utilization account.
