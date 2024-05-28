@@ -1,13 +1,18 @@
 from datetime import datetime, timedelta
 
 ### These libraries needs to be uploaded ###
-from openpyxl import Workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
+from openpyxl.chart import LineChart, Reference
+from openpyxl import load_workbook
 from openpyxl.styles import Font
+from openpyxl import Workbook
+import pandas as pd
 import sqlite3
 
 database_dosya_yolu = "data.csv"
 degiskenlercsv_ortak_dosya_yolu = "variables.csv"
 utilizasyonraporu_cikti_dosyasi_yolu = "Utilizasyon.xlsx"
+sql_database = 'monthlyrobots.db'
 
 with open(degiskenlercsv_ortak_dosya_yolu, "r", encoding="utf-8") as dosya:
     degisken_satirlari = dosya.readlines()
@@ -74,7 +79,7 @@ for satir in veri_satirlari:
                                                             yeni_satir[29]]))
 
         except:
-            print("Tarihte bir sorun var gibi:\n"+str(yeni_satir[23]))
+            print(yeni_satir[23])
             
 
     counter += 1
@@ -203,15 +208,15 @@ def save_data_to_db(robot, tarih, yuzde):
 
     # Tabloyu oluşturma (eğer yoksa)
     cursor.execute('''CREATE TABLE IF NOT EXISTS monthlyrobots
-                      (Robot TEXT, Tarih DATETIME, Yuzde TEXT)''')
+                      (robot_name TEXT, date DATETIME, percentage TEXT)''')
 
     # Aynı robot ve tarih kombinasyonuna sahip bir kayıt olup olmadığını kontrol etme
-    cursor.execute("SELECT * FROM monthlyrobots WHERE Robot = ? AND Tarih = ?", (robot, tarih))
+    cursor.execute("SELECT * FROM monthlyrobots WHERE robot_name = ? AND date = ?", (robot, tarih))
     data = cursor.fetchone()
 
     if data is None:
         # Eger kayıt yoksa yeni veriyi ekle
-        cursor.execute("INSERT INTO monthlyrobots (Robot, Tarih, Yuzde) VALUES (?, ?, ?)", (robot, tarih, yuzde))
+        cursor.execute("INSERT INTO monthlyrobots (robot_name, date, percentage) VALUES (?, ?, ?)", (robot, tarih, yuzde))
         conn.commit()
     else:
         print(f"{robot} için {tarih} tarihinde zaten bir kayıt mevcut.")
@@ -240,6 +245,7 @@ for robotprocesses in utilization:
 
     sorted_processes = sorted(utilization[robotprocesses]["processes"], key=lambda x: datetime.strptime(x["starteddate"], "%m/%d/%Y %I:%M:%S %p"))
     for idx, process in enumerate(sorted_processes):
+        temp = ""
         if process["processresult"] == "Successful":
             success_counter += 1
             temp = calculate_time_difference_in_minutes(process["starteddate"], process["endeddate"])
@@ -319,8 +325,47 @@ for robotprocesses in utilization:
         ws.append([day, format_time(free_time)])
 
 
-wb.remove(wb["Sheet"])
-wb.save(utilizasyonraporu_cikti_dosyasi_yolu)
 
+ws = wb.create_sheet("Efficiency by Dates")
+
+connection = sqlite3.connect(sql_database)
+
+df = pd.read_sql_query("SELECT * FROM monthlyrobots", connection)
+
+connection.close()
+
+df.columns = df.columns.str.lower().str.strip()
+df['date'] = pd.to_datetime(df['date'], format='%d/%m/%Y')
+df['percentage'] = df['percentage'].str.replace('%', '').astype(float)
+df['date'] = df['date'].dt.date
+pivot_df = df.pivot(index='date', columns='robot_name', values='percentage')
+
+for r in dataframe_to_rows(pivot_df, index=True, header=True):
+    ws.append(r)
+
+# Fazladan başlıkları kaldırma
+ws.delete_rows(ws.max_row-4, 1)
+
+# Graph creator
+chart = LineChart()
+chart.title = "Robot Efficiencies"
+chart.style = 10
+chart.y_axis.title = 'Efficiency (%)'
+chart.x_axis.title = 'Date'
+
+data = Reference(ws, min_col=2, min_row=1, max_col=ws.max_column, max_row=ws.max_row)
+chart.add_data(data, titles_from_data=True)
+
+dates = Reference(ws, min_col=1, min_row=2, max_row=ws.max_row)
+chart.set_categories(dates)
+chart.width = 20
+chart.height = 10
+ws.add_chart(chart, "A"+str(ws.max_row+2))
+
+
+
+wb.remove(wb["Sheet"])
+
+wb.save(utilizasyonraporu_cikti_dosyasi_yolu)
 
 
