@@ -83,9 +83,9 @@ for satir in veri_satirlari:
     counter += 1
 
 
-#with open("sorgulanmisveriler.csv", "w", encoding="utf-8-sig") as yeni_dosya:
-#    for satir in duzenlenmis_veri_satirlari:
-#        yeni_dosya.write(satir + "\n")
+# with open("sorgulanmisveriler.csv", "w", encoding="utf-8-sig") as yeni_dosya:
+#     for satir in duzenlenmis_veri_satirlari:
+#         yeni_dosya.write(satir + "\n")
 print(str(startdate) + " tarihinden " + str(lastdate) + " tarihine kadar olan veriler excel e aktarildi.")
 
 
@@ -154,6 +154,7 @@ for i in duzenlenmis_veri_satirlari:
 
 
 def format_time(minutes):
+    """This Function Gives You Day, Hour, Minutes"""
     days = int(minutes // (24 * 60))
     hours = int((minutes % (24 * 60)) // 60)
     mins = int(minutes % 60)
@@ -171,10 +172,35 @@ def calculate_time_difference_in_minutes(start_date_str, end_date_str):
     end_date = datetime.strptime(end_date_str, "%m/%d/%Y %I:%M:%S %p")
 
     time_difference = end_date - start_date
-
     time_difference_in_minutes = time_difference.total_seconds() / 60
 
     return time_difference_in_minutes
+
+def calculate_daily_free_times(free_intervals):
+    """Calculate daily free times from free intervals"""
+    daily_free_times = {}
+
+    for interval in free_intervals:
+        start = datetime.strptime(interval['start'], "%m/%d/%Y %I:%M:%S %p")
+        end = datetime.strptime(interval['end'], "%m/%d/%Y %I:%M:%S %p")
+        current = start
+
+        while current < end:
+            day_end = datetime(current.year, current.month, current.day, 23, 59, 59)
+            if day_end > end:
+                day_end = end
+
+            free_time = (day_end - current).total_seconds() / 60
+            day_key = current.strftime("%d/%m/%Y")
+
+            if day_key in daily_free_times:
+                daily_free_times[day_key] += free_time
+            else:
+                daily_free_times[day_key] = free_time
+
+            current = day_end + timedelta(seconds=1)  # Move to the next day
+
+    return daily_free_times
 
 def save_data_to_db(robot, tarih, yuzde):
     conn = sqlite3.connect('monthlyrobots.db')
@@ -182,14 +208,22 @@ def save_data_to_db(robot, tarih, yuzde):
 
     # Tabloyu oluşturma (eğer yoksa)
     cursor.execute('''CREATE TABLE IF NOT EXISTS monthlyrobots
-                    (Robot TEXT, Tarih TEXT, Yuzde TEXT)''')
+                      (Robot TEXT, Tarih DATETIME, Yuzde TEXT)''')
 
-    cursor.execute("INSERT INTO monthlyrobots (Robot, Tarih, Yuzde) VALUES (?, ?, ?)",(robot, tarih, yuzde))
+    # Aynı robot ve tarih kombinasyonuna sahip bir kayıt olup olmadığını kontrol etme
+    cursor.execute("SELECT * FROM monthlyrobots WHERE Robot = ? AND Tarih = ?", (robot, tarih))
+    data = cursor.fetchone()
 
-    conn.commit()
+    if data is None:
+        # Eğer kayıt yoksa yeni veriyi ekle
+        cursor.execute("INSERT INTO monthlyrobots (Robot, Tarih, Yuzde) VALUES (?, ?, ?)", (robot, tarih, yuzde))
+        conn.commit()
+    else:
+        print(f"{robot} için {tarih} tarihinde zaten bir kayıt mevcut.")
 
     conn.close()
 
+    
 bold_font = Font(bold=True)
 availabletimes = ""
 
@@ -205,7 +239,7 @@ for robotprocesses in utilization:
     robot_free_intervals = []
     
     ws = wb.create_sheet(robotprocesses)
-    ws.append(["Process","Started (absolute)","Ended (absolute)","Time","Status","Trigger"])
+    ws.append(["Process", "Started (absolute)", "Ended (absolute)", "Time", "Status", "Trigger"])
     for cell in ws[1]:
         cell.font = bold_font
 
@@ -215,25 +249,14 @@ for robotprocesses in utilization:
             success_counter += 1
             temp = calculate_time_difference_in_minutes(process["starteddate"], process["endeddate"])
             calc_successful += temp
-
         elif process["processresult"] == "Faulted":
             faulted_counter += 1
-            temp = calculate_time_difference_in_minutes(process["starteddate"], process["endeddate"])
-
         elif process["processresult"] == "Running":
             running_counter += 1
-            temp = ""
-        
         elif process["processresult"] == "Pending":
             pending_counter += 1
-            temp = ""
-
         elif process["processresult"] == "Stopped":
             stopped_counter += 1
-            temp = ""
-
-
-
         if idx > 0:
             previous_process = sorted_processes[idx - 1]
             end_prev = datetime.strptime(previous_process["endeddate"], "%m/%d/%Y %I:%M:%S %p")
@@ -244,16 +267,13 @@ for robotprocesses in utilization:
                     "start": end_prev.strftime("%m/%d/%Y %I:%M:%S %p"),
                     "end": start_current.strftime("%m/%d/%Y %I:%M:%S %p")
                 })
-        
         tempcalc = calc_successful / (day_interval * 24 * 60) * 100
         tempcalc = round(tempcalc, 2)
-        if type(temp) != type(""):
+        if type(temp) != str:
             temp = str(round(temp, 2)) + " dakika"
         else:
             temp = ""
-
-
-        ws.append([process["name"] , process["starteddate"] , process["endeddate"] , temp , process["processresult"] , process["processstarter"]])
+        ws.append([process["name"], process["starteddate"], process["endeddate"], temp, process["processresult"], process["processstarter"]])
 
     utilization[robotprocesses]["efficiency"] = {
         "Total Consumed Time": str(calc_successful),
@@ -266,15 +286,17 @@ for robotprocesses in utilization:
     utilization[robotprocesses]["available"] = robot_free_intervals
     ws.append([])
     ws.append([])
-    save_data_to_db(robotprocesses, (datetime.strptime(process["starteddate"], "%m/%d/%Y %I:%M:%S %p")).strftime("%m/%Y"), "%" + str(tempcalc))
+    save_data_to_db(robotprocesses, (datetime.strptime(process["starteddate"], "%m/%d/%Y %I:%M:%S %p")).strftime("%d/%m/%Y"), "%" + str(tempcalc))
 
-    ws.append(["Total Consumed Time", str(round(calc_successful, 3))+"dakika"])
+    ws.append(["Total Consumed Time", str(round(calc_successful, 3)) + " dakika"])
     ws[ws.max_row][0].font = bold_font
-    ws.append(["Successful Counter",success_counter])
+    ws.append(["Successful Counter", success_counter])
     ws[ws.max_row][0].font = bold_font
-    ws.append(["Faulted Counter",faulted_counter])
+    ws.append(["Faulted Counter", faulted_counter])
     ws[ws.max_row][0].font = bold_font
-    ws.append(["Running Counter",running_counter])
+    ws.append(["Running Counter", running_counter])
+    ws[ws.max_row][0].font = bold_font    
+    ws.append(["Pending Counter", pending_counter])
     ws[ws.max_row][0].font = bold_font
     ws.append(["Efficiency", "%" + str(tempcalc)])
     ws[ws.max_row][0].font = bold_font
@@ -282,20 +304,25 @@ for robotprocesses in utilization:
     ws.append([])
     ws.append([])
 
-    if utilization[robotprocesses]["available"] != []:
-        ws.append(["Available Start Times", "Available End Times","Total Free Time"])
+    if utilization[robotprocesses]["available"]:
+        ws.append(["Available Start Times", "Available End Times", "Free Times"])
         ws[ws.max_row][0].font = bold_font
         ws[ws.max_row][1].font = bold_font
         ws[ws.max_row][2].font = bold_font
 
     for gapdata in utilization[robotprocesses]["available"]:
-        gap = format_time(calculate_time_difference_in_minutes(gapdata["start"],gapdata["end"]))
+        gap = format_time(calculate_time_difference_in_minutes(gapdata["start"], gapdata["end"]))
         ws.append([gapdata["start"], gapdata["end"], gap])
-
-
-# json_output = json.dumps(utilization, ensure_ascii=False, indent=4)
-# with open("utilization.json", "w", encoding="utf-8") as file:
-#     file.write(json_output)
+    
+    daily_free_times = calculate_daily_free_times(utilization[robotprocesses]["available"])
+    ws.append([])
+    ws.append([])
+    ws.append(["Daily Free Times", "Total Free Times"])
+    ws[ws.max_row][0].font = bold_font
+    ws[ws.max_row][1].font = bold_font
+    for day, free_time in daily_free_times.items():
+        ws.append([day, format_time(free_time)])
+        ws[ws.max_row][0].font = bold_font
 
 
 wb.remove(wb["Sheet"])
