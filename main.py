@@ -5,9 +5,6 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 import sqlite3
 
-
-# ====== ilk olarak kac gunluk veri gerektigini ve en az kac dk musait zaman istedigimizi cekiyoruz. ======
-
 database_dosya_yolu = "data.csv"
 degiskenlercsv_ortak_dosya_yolu = "variables.csv"
 utilizasyonraporu_cikti_dosyasi_yolu = "Utilizasyon.xlsx"
@@ -77,7 +74,7 @@ for satir in veri_satirlari:
                                                             yeni_satir[29]]))
 
         except:
-            print(yeni_satir[23])
+            print("Tarihte bir sorun var gibi:\n"+str(yeni_satir[23]))
             
 
     counter += 1
@@ -151,8 +148,6 @@ for i in duzenlenmis_veri_satirlari:
     counter += 1
 
 
-
-
 def format_time(minutes):
     """This Function Gives You Day, Hour, Minutes"""
     days = int(minutes // (24 * 60))
@@ -160,11 +155,11 @@ def format_time(minutes):
     mins = int(minutes % 60)
     
     if days > 0:
-        return f"{days} gün, {hours} saat, {mins} dakika"
+        return f"{days} day, {hours} hours, {mins} mins"
     elif hours > 0:
-        return f"{hours} saat, {mins} dakika"
+        return f"{hours} hours, {mins} mins"
     else:
-        return f"{mins} dakika"
+        return f"{mins} mins"
 
 
 def calculate_time_difference_in_minutes(start_date_str, end_date_str):
@@ -215,7 +210,7 @@ def save_data_to_db(robot, tarih, yuzde):
     data = cursor.fetchone()
 
     if data is None:
-        # Eğer kayıt yoksa yeni veriyi ekle
+        # Eger kayıt yoksa yeni veriyi ekle
         cursor.execute("INSERT INTO monthlyrobots (Robot, Tarih, Yuzde) VALUES (?, ?, ?)", (robot, tarih, yuzde))
         conn.commit()
     else:
@@ -270,7 +265,7 @@ for robotprocesses in utilization:
         tempcalc = calc_successful / (day_interval * 24 * 60) * 100
         tempcalc = round(tempcalc, 2)
         if type(temp) != str:
-            temp = str(round(temp, 2)) + " dakika"
+            temp = str(round(temp, 2)) + " minute"
         else:
             temp = ""
         ws.append([process["name"], process["starteddate"], process["endeddate"], temp, process["processresult"], process["processstarter"]])
@@ -288,7 +283,7 @@ for robotprocesses in utilization:
     ws.append([])
     save_data_to_db(robotprocesses, (datetime.strptime(process["starteddate"], "%m/%d/%Y %I:%M:%S %p")).strftime("%d/%m/%Y"), "%" + str(tempcalc))
 
-    ws.append(["Total Consumed Time", str(round(calc_successful, 3)) + " dakika"])
+    ws.append(["Total Consumed Time", str(round(calc_successful, 3)) + " minute"])
     ws[ws.max_row][0].font = bold_font
     ws.append(["Successful Counter", success_counter])
     ws[ws.max_row][0].font = bold_font
@@ -322,8 +317,10 @@ for robotprocesses in utilization:
     ws[ws.max_row][1].font = bold_font
     for day, free_time in daily_free_times.items():
         ws.append([day, format_time(free_time)])
-        ws[ws.max_row][0].font = bold_font
 
 
 wb.remove(wb["Sheet"])
 wb.save(utilizasyonraporu_cikti_dosyasi_yolu)
+
+
+
