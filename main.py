@@ -14,6 +14,8 @@ degiskenlercsv_ortak_dosya_yolu = "variables.csv"
 utilizasyonraporu_cikti_dosyasi_yolu = "Utilizasyon.xlsx"
 sql_database = 'monthlyrobots.db'
 
+
+
 conn = sqlite3.connect(sql_database)
 cursor = conn.cursor()
 cursor.execute('''
@@ -25,6 +27,9 @@ CREATE TABLE IF NOT EXISTS monthlyrobots (
 ''')
 conn.commit()
 conn.close()
+
+
+
 
 with open(degiskenlercsv_ortak_dosya_yolu, "r", encoding="utf-8") as dosya:
     degisken_satirlari = dosya.readlines()
@@ -349,25 +354,28 @@ df['percentage'] = df['percentage'].str.replace('%', '').astype(float)
 df['date'] = df['date'].dt.date
 pivot_df = df.pivot(index='date', columns='robot_name', values='percentage')
 
-for r in dataframe_to_rows(pivot_df, index=True, header=True):
-    ws.append(r)
+if not all(date == df['date'][0] for date in df['date']):
+    for r in dataframe_to_rows(pivot_df, index=True, header=True):
+        ws.append(r)
 
-ws.delete_rows(ws.max_row-4, 1)
-# Graph creator
-chart = LineChart()
-chart.title = "Robot Efficiencies"
-chart.style = 10
-chart.y_axis.title = 'Efficiency (%)'
-chart.x_axis.title = 'Date'
+    ws.delete_rows(ws.max_row-4, 1)
+    # Graph creator
+    chart = LineChart()
+    chart.title = "Robot Efficiencies"
+    chart.style = 10
+    chart.y_axis.title = 'Efficiency (%)'
+    chart.x_axis.title = 'Date'
 
-data = Reference(ws, min_col=2, min_row=1, max_col=ws.max_column, max_row=ws.max_row)
-chart.add_data(data, titles_from_data=True)
+    data = Reference(ws, min_col=2, min_row=1, max_col=ws.max_column, max_row=ws.max_row)
+    chart.add_data(data, titles_from_data=True)
 
-dates = Reference(ws, min_col=1, min_row=2, max_row=ws.max_row)
-chart.set_categories(dates)
-chart.width = 20
-chart.height = 10
-ws.add_chart(chart, "A"+str(ws.max_row+2))
+    dates = Reference(ws, min_col=1, min_row=2, max_row=ws.max_row)
+    chart.set_categories(dates)
+    chart.width = 20
+    chart.height = 10
+    ws.add_chart(chart, "A"+str(ws.max_row+2))
+else:
+    wb.remove(wb["Efficiency by Dates"])
 
 wb.remove(wb["Sheet"])
 wb.save(utilizasyonraporu_cikti_dosyasi_yolu)
